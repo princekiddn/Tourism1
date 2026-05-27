@@ -31,6 +31,11 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['reviews']['Row'], 'id' | 'created_at'> & { id?: string };
         Update: Partial<Pick<Database['public']['Tables']['reviews']['Row'], 'rating' | 'title' | 'body'>>;
       };
+      wishlists: {
+        Row: { id: string; user_id: string; item_type: 'destination' | 'hotel' | 'package'; item_id: string; created_at: string; };
+        Insert: Omit<Database['public']['Tables']['wishlists']['Row'], 'id' | 'created_at'> & { id?: string };
+        Update: Partial<Omit<Database['public']['Tables']['wishlists']['Row'], 'id' | 'created_at'>>;
+      };
     };
   };
 }
@@ -41,3 +46,4 @@ export type Hotel = Database['public']['Tables']['hotels']['Row'];
 export type TourPackage = Database['public']['Tables']['tour_packages']['Row'];
 export type Booking = Database['public']['Tables']['bookings']['Row'];
 export type Review = Database['public']['Tables']['reviews']['Row'];
+export type Wishlist = Database['public']['Tables']['wishlists']['Row'];

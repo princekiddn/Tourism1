@@ -1,5 +1,6 @@
-import { MapPin, Wifi, Coffee, Waves } from 'lucide-react';
+import { MapPin, Wifi, Coffee, Waves, Heart } from 'lucide-react';
 import StarRating from './StarRating';
+import { useAuth } from '../context/AuthContext';
 import type { Hotel } from '../lib/database.types';
 
 interface HotelCardProps { hotel: Hotel; onBook?: () => void; }
@@ -7,13 +8,27 @@ interface HotelCardProps { hotel: Hotel; onBook?: () => void; }
 const amenityIcons: Record<string, React.ReactNode> = { 'Free WiFi': <Wifi className="w-3 h-3" />, Pool: <Waves className="w-3 h-3" />, Restaurant: <Coffee className="w-3 h-3" /> };
 
 export default function HotelCard({ hotel, onBook }: HotelCardProps) {
+  const { user, isInWishlist, toggleWishlist } = useAuth();
+  const wishlisted = isInWishlist('hotel', hotel.id);
   const amenities = Array.isArray(hotel.amenities) ? hotel.amenities : [];
+
+  const handleHeartClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) return;
+    toggleWishlist('hotel', hotel.id);
+  };
+
   return (
-    <div className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 hover:-translate-y-1">
+    <div className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 hover:-translate-y-1 animate-fade-in">
       <div className="relative overflow-hidden h-48">
         <img src={hotel.image_url} alt={hotel.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
         <div className="absolute top-3 right-3 bg-white text-gray-800 text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">{'★'.repeat(hotel.star_rating)} {hotel.star_rating}-Star</div>
+        {user && (
+          <button onClick={handleHeartClick} className="absolute top-3 left-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:scale-110 transition-transform">
+            <Heart className={`w-4 h-4 transition-colors ${wishlisted ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+          </button>
+        )}
         {!hotel.is_available && (<div className="absolute inset-0 bg-black/50 flex items-center justify-center"><span className="text-white font-semibold bg-red-600 px-3 py-1 rounded-full text-sm">Fully Booked</span></div>)}
       </div>
       <div className="p-4">

@@ -11,6 +11,8 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import PasswordResetPage from './pages/PasswordResetPage';
+import WishlistPage from './pages/WishlistPage';
 
 type Page =
   | 'home'
@@ -22,10 +24,12 @@ type Page =
   | 'register'
   | 'dashboard'
   | 'admin'
-  | 'profile';
+  | 'profile'
+  | 'reset-password'
+  | 'wishlist';
 
-const FULL_SCREEN_PAGES: Page[] = ['login', 'register'];
-const NO_FOOTER_PAGES: Page[] = ['login', 'register', 'dashboard', 'admin', 'profile'];
+const FULL_SCREEN_PAGES: Page[] = ['login', 'register', 'reset-password'];
+const NO_FOOTER_PAGES: Page[] = ['login', 'register', 'dashboard', 'admin', 'profile', 'reset-password', 'wishlist'];
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -70,6 +74,8 @@ function AppContent() {
         {currentPage === 'register' && <RegisterPage onNavigate={navigate} />}
         {(currentPage === 'dashboard' || currentPage === 'profile') && <UserDashboard onNavigate={navigate} />}
         {currentPage === 'admin' && <AdminDashboard onNavigate={navigate} />}
+        {currentPage === 'reset-password' && <PasswordResetPage onNavigate={navigate} />}
+        {currentPage === 'wishlist' && <WishlistPage onNavigate={navigate} />}
       </main>
 
       {showFooter && <Footer onNavigate={navigate} />}

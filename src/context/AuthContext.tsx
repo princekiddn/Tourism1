@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import type { Profile } from '../lib/database.types';
+import type { Profile, Wishlist } from '../lib/database.types';
 
 interface AuthContextType {
   user: User | null;
@@ -13,7 +13,12 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
+  resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
   isAdmin: boolean;
+  wishlist: Wishlist[];
+  toggleWishlist: (itemType: 'destination' | 'hotel' | 'package', itemId: string) => Promise<void>;
+  isInWishlist: (itemType: 'destination' | 'hotel' | 'package', itemId: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,24 +28,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [wishlist, setWishlist] = useState<Wishlist[]>([]);
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
     setProfile(data);
   };
 
+  const fetchWishlist = async (userId: string) => {
+    const { data } = await supabase.from('wishlists').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+    setWishlist(data || []);
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id).finally(() => setLoading(false));
-      else setLoading(false);
+      if (session?.user) {
+        Promise.all([fetchProfile(session.user.id), fetchWishlist(session.user.id)]).finally(() => setLoading(false));
+      } else setLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) (async () => { await fetchProfile(session.user.id); setLoading(false); })();
-      else { setProfile(null); setLoading(false); }
+      if (session?.user) {
+        (async () => {
+          await Promise.all([fetchProfile(session.user.id), fetchWishlist(session.user.id)]);
+          setLoading(false);
+        })();
+      } else { setProfile(null); setWishlist([]); setLoading(false); }
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -69,8 +85,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null };
   };
 
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    return { error: error as Error | null };
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    return { error: error as Error | null };
+  };
+
+  const toggleWishlist = async (itemType: 'destination' | 'hotel' | 'package', itemId: string) => {
+    if (!user) return;
+    const existing = wishlist.find(w => w.item_type === itemType && w.item_id === itemId);
+    if (existing) {
+      const { error } = await supabase.from('wishlists').delete().eq('id', existing.id);
+      if (!error) setWishlist(prev => prev.filter(w => w.id !== existing.id));
+    } else {
+      const { data, error } = await supabase.from('wishlists').insert({ user_id: user.id, item_type: itemType, item_id: itemId }).select().maybeSingle();
+      if (!error && data) setWishlist(prev => [data, ...prev]);
+    }
+  };
+
+  const isInWishlist = (itemType: 'destination' | 'hotel' | 'package', itemId: string) => {
+    return wishlist.some(w => w.item_type === itemType && w.item_id === itemId);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signUp, signIn, signInWithGoogle, signOut, updateProfile, isAdmin: profile?.role === 'admin' }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, signUp, signIn, signInWithGoogle, signOut, updateProfile, resetPassword, updatePassword, isAdmin: profile?.role === 'admin', wishlist, toggleWishlist, isInWishlist }}>
       {children}
     </AuthContext.Provider>
   );

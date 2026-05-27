@@ -50,6 +50,19 @@ export default function BookingPage({ bookingData, onNavigate }: BookingPageProp
     });
     setLoading(false);
     if (err) { setError(err.message); return; }
+    // Send booking notification
+    try {
+      const item = selectedItem;
+      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/booking-notification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({
+          bookingId: 'pending', userEmail: user.email, userName: user.user_metadata?.full_name,
+          itemName: item?.name, checkIn: form.check_in, checkOut: form.check_out,
+          guests: form.guests, totalPrice: total, bookingType: type,
+        }),
+      });
+    } catch { /* notification is non-critical */ }
     setSuccess(true);
   };
 
